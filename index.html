@@ -276,7 +276,7 @@
         Delete. Hover a hole to probe its level.</div>
     </aside>
     <main class="p">
-      <div class="tb"><button id="zo">−</button><button id="zi">+</button><button id="zf">Fit</button><span id="pr"
+      <div class="tb"><button id="zo">−</button><button id="zi">+</button><button id="zf">Fit</button> <span class="i">Board:</span><button id="cm" title="Fewer columns">−</button><span id="cn" class="i">30 columns</span><button id="cp" title="More columns">+</button><span id="pr"
           class="i">Tap a terminal to probe it</span></div>
       <div id="sc"><svg id="bb" viewBox="0 0 1000 770">
           <g id="g0"></g>
@@ -307,7 +307,7 @@
     function pos(id) {
       let m; if (id === 'PSU+') return [40, 50]; if (id === 'PSUG') return [100, 50]; if (m = id.match(/^P(\d)$/)) return [m[1] * 60 - 20, 598];
       if (m = id.match(/^SW(\d+)$/)) return [190 + m[1] * 68, 598]; if (m = id.match(/^L(\d+)$/)) return [190 + m[1] * 68, 92];
-      if (m = id.match(/^R([tb][+-]):(\d+)$/)) return [cx(+m[2]), RL[m[1]]]; m = id.match(/^[TB](\d+)([a-j])$/); return [cx(+m[1]), RY[m[2]]]
+      if (m = id.match(/^SG(a|b|c|d|e|f|g|dp|CM)$/)) return [cx(NC - 1) + 85 + 18 + ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'dp', 'CM'].indexOf(m[1]) * 23, 258]; if (m = id.match(/^R([tb][+-]):(\d+)$/)) return [cx(+m[2]), RL[m[1]]]; m = id.match(/^[TB](\d+)([a-j])$/); return [cx(+m[1]), RY[m[2]]]
     }
     function key(id) { const m = id.match(/^([TB]\d+)[a-j]$/); return m ? m[1] : id[0] === 'R' ? id.split(':')[0] : id }
     // ===== IC behaviour library (74-series pinouts, DIP-14 & DIP-16) =====
@@ -321,7 +321,7 @@
     const nt = v => v === 'X' ? 'X' : 1 - v, AND = (a, b) => a === 0 || b === 0 ? 0 : a === 1 && b === 1 ? 1 : 'X', OR = (a, b) => a === 1 || b === 1 ? 1 : a === 0 && b === 0 ? 0 : 'X', XOR = (a, b) => a === 'X' || b === 'X' ? 'X' : a ^ b;
     // n-input capable (reduce folds the 2-input functions across all inputs)
     const ev = (op, i) => ({ and: () => i.reduce((a, b) => AND(a, b)), nand: () => nt(i.reduce((a, b) => AND(a, b))), or: () => i.reduce((a, b) => OR(a, b)), nor: () => nt(i.reduce((a, b) => OR(a, b))), xor: () => XOR(...i), not: () => nt(i[0]) })[op]();
-    [[7400, 'nand', 'Quad 2-input NAND', QG], [7402, 'nor', 'Quad 2-input NOR', NG], [7404, 'not', 'Hex inverter', HG], [7408, 'and', 'Quad 2-input AND', QG], [7411, 'and', 'Triple 3-input AND', TG], [7432, 'or', 'Quad 2-input OR', QG], [4072, 'or', 'Dual 4-input OR (CD4072)', FG, [6, 8]], [7486, 'xor', 'Quad 2-input XOR', QG]]
+    [[7400, 'nand', 'Quad 2-input NAND', QG], [7402, 'nor', 'Quad 2-input NOR', NG], [7404, 'not', 'Hex inverter', HG], [7408, 'and', 'Quad 2-input AND', QG], [7410, 'nand', 'Triple 3-input NAND', TG], [7411, 'and', 'Triple 3-input AND', TG], [7432, 'or', 'Quad 2-input OR', QG], [4072, 'or', 'Dual 4-input OR (CD4072)', FG, [6, 8]], [7486, 'xor', 'Quad 2-input XOR', QG]]
       .forEach(([n, op, desc, gates, nc]) => {
         const L = {}; gates.forEach((g, i) => { g.in.forEach((p, j) => L[p] = (i + 1) + 'ABCD'[j]); L[g.out] = (i + 1) + 'Y' }); L[14] = 'VCC'; L[7] = 'GND'; (nc || []).forEach(p => L[p] = 'NC');
         DEF[n] = { n, op, desc, gates, pins: 14, vcc: 14, gnd: 7, L, inputs: [].concat(...gates.map(g => g.in)), outputs: gates.map(g => g.out), eval: pv => { const r = {}; gates.forEach(g => r[g.out] = ev(op, g.in.map(pv))); return r } }
@@ -426,12 +426,28 @@
       },
       table: '<table><tr><th colspan="4">Sum Outputs</th><th>Carry</th></tr><tr><th>S4</th><th>S3</th><th>S2</th><th>S1</th><th>C4</th></tr><tr><td colspan="5">Sum [S4 S3 S2 S1] = (A4..A1) + (B4..B1) + C0<br>C4 = Carry Out</td></tr></table><small class="i">Pin 5 VCC, Pin 12 GND. Cin = Pin 13.</small>'
     };
+    // 7447: BCD to 7-segment decoder/driver, active-LOW outputs (drives a common-anode display). Open LT̅/BI̅/RBI̅ read as 1 (TTL).
+    // Segment patterns a..g (1 = lit). 10 to 15 are the 7447's special shapes, 15 = blank.
+    const SEGP = ['1111110', '0110000', '1101101', '1111001', '0110011', '1011011', '0011111', '1110000', '1111111', '1110011', '0001101', '0011001', '0100011', '1001011', '0001111', '0000000'], SEGO = [13, 12, 11, 10, 9, 15, 14];
+    DEF[7447] = {
+      n: 7447, desc: 'BCD to 7-segment decoder / driver (active-LOW)', pins: 16, vcc: 16, gnd: 8,
+      L: { 1: 'B', 2: 'C', 3: 'LT̅', 4: 'BI̅', 5: 'RBI̅', 6: 'D', 7: 'A', 8: 'GND', 9: 'e', 10: 'd', 11: 'c', 12: 'b', 13: 'a', 14: 'g', 15: 'f', 16: 'VCC' },
+      inputs: [1, 2, 6, 7], outputs: SEGO,
+      eval: pv => {
+        const hi = v => v === 'X' ? 1 : v, lt = hi(pv(3)), bi = hi(pv(4)), rbi = hi(pv(5)), res = {}, all = v => { SEGO.forEach(p => res[p] = v); return res };
+        if (bi === 0) return all(1); if (lt === 0) return all(0);
+        const a = pv(7), b = pv(1), c = pv(2), d = pv(6); if ([a, b, c, d].includes('X')) return all('X');
+        const n = (d << 3) | (c << 2) | (b << 1) | a; if (n === 0 && rbi === 0) return all(1);
+        SEGO.forEach((p, i) => res[p] = SEGP[n][i] === '1' ? 0 : 1); return res
+      },
+      table: '<table><tr><th colspan="4">BCD</th><th colspan="7">Outputs (0 = segment ON)</th></tr><tr><th>D</th><th>C</th><th>B</th><th>A</th><th>a</th><th>b</th><th>c</th><th>d</th><th>e</th><th>f</th><th>g</th></tr>' + SEGP.slice(0, 10).map((p, n) => `<tr><td>${n >> 3 & 1}</td><td>${n >> 2 & 1}</td><td>${n >> 1 & 1}</td><td>${n & 1}</td>${[...p].map(x => `<td>${1 - x}</td>`).join('')}</tr>`).join('') + '</table><small class="i">Inputs 10 to 15 give the 7447\'s special shapes (15 = blank). BI̅ = 0 blanks all segments; LT̅ = 0 lights all of them; RBI̅ = 0 blanks a zero. Open LT̅, BI̅ and RBI̅ read as 1. Use a common-anode display: COM to +5V. Pin 16 VCC, Pin 8 GND.</small>'
+    };
     const pinHole = (ic, p) => { const P = DEF[ic.type]?.pins || 14, W = P / 2; return p <= W ? `B${ic.col + p - 1}f` : `T${ic.col + P - p}e` };
     // ===== State =====
-    let S = { psu: false, p: [0, 0], armed: null, sw: Array(12).fill(0), ics: [], wires: [], nid: 1, sel: null, pending: null }, U = [], R = [], mouse = [0, 0], drag = null, dragW = false, samples = [], lastSig = '', log = [], sim, probeTxt = 'Hover a terminal';
-    const snap = () => JSON.stringify({ ics: S.ics, wires: S.wires, nid: S.nid });
+    let NC = 30, S = { psu: false, p: [0, 0], armed: null, sw: Array(12).fill(0), ics: [], wires: [], nid: 1, sel: null, pending: null }, U = [], R = [], mouse = [0, 0], drag = null, dragW = false, samples = [], lastSig = '', log = [], sim, probeTxt = 'Hover a terminal';
+    const snap = () => JSON.stringify({ ics: S.ics, wires: S.wires, nid: S.nid, nc: NC });
     function save() { U.push(snap()); if (U.length > 100) U.shift(); R = [] }
-    const restore = j => Object.assign(S, JSON.parse(j), { sel: null, pending: null });
+    const restore = j => { const o = JSON.parse(j); if ((o.nc || 30) !== NC) { NC = o.nc || 30; buildStatic() } Object.assign(S, o, { sel: null, pending: null }) };
     let ft; function flash(m) { $('#flash').textContent = m; clearTimeout(ft); ft = setTimeout(() => $('#flash').textContent = '', 4000) }
     // ===== Simulation engine (pure: state in, results out) =====
     function simulate(S) {
@@ -469,8 +485,9 @@
     const svg = $('#bb'), g0 = $('#g0'), g1 = $('#g1'), g2 = $('#g2');
     function pt(e) { const p = svg.createSVGPoint(); p.x = e.clientX; p.y = e.clientY; const q = p.matrixTransform(svg.getScreenCTM().inverse()); return [q.x, q.y] }
     function buildStatic() {
-      let s = '<rect x="30" y="125" width="940" height="420" rx="8" fill="var(--bb)" stroke="var(--bd)"/><rect x="30" y="328" width="940" height="24" fill="var(--gap)"/>', h = '';
-      s += '<rect x="10" y="22" width="125" height="93" rx="5" fill="none" stroke="var(--bd)"/><rect x="145" y="22" width="850" height="93" rx="5" fill="none" stroke="var(--bd)"/><rect x="10" y="565" width="125" height="185" rx="5" fill="none" stroke="var(--bd)"/><rect x="145" y="565" width="850" height="185" rx="5" fill="none" stroke="var(--bd)"/>';
+      const BW = cx(NC - 1) + 20; svg.setAttribute('viewBox', '0 0 ' + (BW + 60 + 235) + ' 770'); $('#cn').textContent = NC + ' columns';
+      let s = '<rect x="30" y="125" width="' + BW + '" height="420" rx="8" fill="var(--bb)" stroke="var(--bd)"/><rect x="30" y="328" width="' + BW + '" height="24" fill="var(--gap)"/>', h = '';
+      s += '<rect x="10" y="22" width="125" height="93" rx="5" fill="none" stroke="var(--bd)"/><rect x="145" y="22" width="' + (BW - 90) + '" height="93" rx="5" fill="none" stroke="var(--bd)"/><rect x="10" y="565" width="125" height="185" rx="5" fill="none" stroke="var(--bd)"/><rect x="145" y="565" width="' + (BW - 90) + '" height="185" rx="5" fill="none" stroke="var(--bd)"/>';
       s += '<g fill="var(--mu)" font-size="10"><text x="12" y="14">POWER SUPPLY</text><text x="147" y="14">LOGIC OUTPUTS</text><text x="12" y="559">PULSER SWITCH</text><text x="147" y="559">LOGIC INPUTS</text><text x="28" y="38">+5V</text><text x="88" y="38">GND</text><text x="32" y="676">P1</text><text x="92" y="676">P2</text><text x="12" y="764" font-size="8">Pulse generator: Phase 4</text></g>';
       for (let k = 0; k < 12; k++) {
         const x = 190 + k * 68; s += `<text x="${x}" y="38" text-anchor="middle" font-size="10" fill="var(--mu)">D${k + 1}</text><text x="${x}" y="584" text-anchor="middle" font-size="10" fill="var(--mu)">D${k + 1}</text>`; h += `<circle data-t="SW${k}" cx="${x}" cy="598" r="10"/><circle data-t="L${k}" cx="${x}" cy="92" r="10"/>`;
@@ -478,10 +495,12 @@
       }
       s += '<circle cx="40" cy="50" r="5" fill="#dc2626"/><circle cx="100" cy="50" r="5" fill="#111"/><circle cx="40" cy="598" r="5" fill="#2563eb"/><circle cx="100" cy="598" r="5" fill="#2563eb"/>'; h += '<circle data-t="PSU+" cx="40" cy="50" r="10"/><circle data-t="PSUG" cx="100" cy="50" r="10"/><circle data-t="P1" cx="40" cy="598" r="10"/><circle data-t="P2" cx="100" cy="598" r="10"/>';
       for (const r in RL) {
-        for (let c = 0; c < 30; c++) { s += `<circle cx="${cx(c)}" cy="${RL[r]}" r="4" fill="var(--hole)"/>`; h += `<circle data-t="R${r}:${c}" cx="${cx(c)}" cy="${RL[r]}" r="9"/>` }
+        for (let c = 0; c < NC; c++) { s += `<circle cx="${cx(c)}" cy="${RL[r]}" r="4" fill="var(--hole)"/>`; h += `<circle data-t="R${r}:${c}" cx="${cx(c)}" cy="${RL[r]}" r="9"/>` }
         s += `<text x="36" y="${RL[r] + 4}" font-size="12" font-weight="700" fill="${r[1] == '+' ? '#dc2626' : 'var(--mu)'}">${r[1] == '+' ? '+' : '−'}</text>`
       }
-      for (const rw in RY) { s += `<text x="38" y="${RY[rw] + 4}" font-size="9" fill="var(--mu)">${rw}</text>`; for (let c = 0; c < 30; c++) { s += `<circle cx="${cx(c)}" cy="${RY[rw]}" r="4" fill="var(--hole)"/>`; h += `<circle data-t="${rw < 'f' ? 'T' : 'B'}${c}${rw}" cx="${cx(c)}" cy="${RY[rw]}" r="8"/>`; if (rw == 'a' || rw == 'j') s += `<text x="${cx(c)}" y="${rw == 'a' ? 218 : 468}" font-size="8" text-anchor="middle" fill="var(--mu)">${c + 1}</text>` } }
+      for (const rw in RY) { s += `<text x="38" y="${RY[rw] + 4}" font-size="9" fill="var(--mu)">${rw}</text>`; for (let c = 0; c < NC; c++) { s += `<circle cx="${cx(c)}" cy="${RY[rw]}" r="4" fill="var(--hole)"/>`; h += `<circle data-t="${rw < 'f' ? 'T' : 'B'}${c}${rw}" cx="${cx(c)}" cy="${RY[rw]}" r="8"/>`; if (rw == 'a' || rw == 'j') s += `<text x="${cx(c)}" y="${rw == 'a' ? 218 : 468}" font-size="8" text-anchor="middle" fill="var(--mu)">${c + 1}</text>` } }
+      const X0 = BW + 65, SG = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'dp', 'CM']; s += `<rect x="${X0}" y="22" width="220" height="278" rx="5" fill="none" stroke="var(--bd)"/><text x="${X0 + 2}" y="14" font-size="10" fill="var(--mu)">7-SEGMENT DISPLAY</text>`;
+      SG.forEach((k, i) => { const x = X0 + 18 + i * 23; s += `<text x="${x}" y="244" text-anchor="middle" font-size="9" fill="var(--mu)">${k === 'CM' ? 'COM' : k}</text><circle cx="${x}" cy="258" r="5" fill="${k === 'CM' ? '#dc2626' : '#9ca3af'}"/>`; h += `<circle data-t="SG${k}" cx="${x}" cy="258" r="10"/>` });
       g0.innerHTML = s; g2.innerHTML = `<g fill="transparent" style="cursor:crosshair">${h}</g>`
     }
     const PAL = ['#2563eb', '#16a34a', '#d97706', '#9333ea', '#0891b2', '#db2777'];
@@ -490,7 +509,7 @@
     function addWire(a, b) { if (a === b) return; if (S.wires.some(w => (w.a === a && w.b === b) || (w.a === b && w.b === a))) return flash('Wire already exists'); const o = occ(); if (o.has(a) || o.has(b)) return flash('That hole is occupied by an IC pin; use another hole in the same column strip'); save(); S.wires.push({ id: S.nid++, a, b, color: wcol(a, b) }) }
     function canPlace(col, id, ty) {
       const type = ty || (id ? S.ics.find(i => i.id == id)?.type : S.armed) || '7400', D = DEF[type] || { pins: 14 }, W = (D.pins || 14) / 2;
-      if (col < 0 || col + W > 30) return flash('IC must fit fully on the breadboard'), 0;
+      if (col < 0 || col + W > NC) return flash('IC must fit fully on the breadboard'), 0;
       if (S.ics.some(o => { if (o.id === id) return false; const oW = (DEF[o.type]?.pins || 14) / 2; return col < o.col + oW && o.col < col + W })) return flash('IC overlaps another IC'), 0;
       const hs = new Set(); for (let p = 1; p <= (D.pins || 14); p++)hs.add(pinHole({ col, type }, p));
       if (S.wires.some(w => hs.has(w.a) || hs.has(w.b))) return flash('Remove wires from those holes first'), 0;
@@ -513,9 +532,22 @@
         const x = 190 + k * 68, on = S.sw[k]; s += `<g style="cursor:pointer"><rect data-sw="${k}" x="${x - 14}" y="648" width="28" height="64" rx="5" fill="var(--bd)"/><rect data-sw="${k}" x="${x - 11}" y="${on ? 651 : 679}" width="22" height="30" rx="4" fill="${on ? '#2563eb' : '#6b7280'}"/></g><text x="${x}" y="732" text-anchor="middle" font-size="11" fill="var(--tx)">${on ? '1' : '0'}</text><circle cx="${x}" cy="624" r="10" fill="${on && S.psu && !sim.short ? '#ef4444' : '#374151'}" stroke="var(--bd)"/>`;
         const lv = sim.leds[k]; s += `<circle cx="${x}" cy="58" r="12" fill="${lv === 1 ? '#ef4444' : '#374151'}" stroke="var(--bd)"/><text x="${x}" y="80" text-anchor="middle" font-size="9" fill="var(--mu)">${lv}</text>`
       }
-      for (let k = 0; k < 2; k++) { s += `<circle data-p="${k}" cx="${40 + k * 60}" cy="640" r="17" fill="${S.p[k] ? '#2563eb' : '#6b7280'}" stroke="var(--bd)" stroke-width="3" style="cursor:pointer"/>` } g1.innerHTML = s;
+      for (let k = 0; k < 2; k++) { s += `<circle data-p="${k}" cx="${40 + k * 60}" cy="640" r="17" fill="${S.p[k] ? '#2563eb' : '#6b7280'}" stroke="var(--bd)" stroke-width="3" style="cursor:pointer"/>` } s += segDraw(); g1.innerHTML = s;
       const sig = S.sw.join('') + sim.leds.join('') + S.psu; if (sig !== lastSig) { lastSig = sig; samples.push({ sw: [...S.sw], led: [...sim.leds] }); if (samples.length > 40) samples.shift() }
       renderPanels()
+    }
+    // 7-segment display: lit when COM and the segment pin differ the right way (common anode: COM = 1, segment = 0)
+    function segDraw() {
+      const X0 = cx(NC - 1) + 85, ox = X0 + 60, oy = 46, cc = !!S.cc, com = sim.vals[sim.N('SGCM')];
+      const on = k => { const v = sim.vals[sim.N('SG' + k)]; return cc ? (com === 0 && v === 1) : (com === 1 && v === 0) };
+      const H = (x, y, l) => `${ox + x},${oy + y} ${ox + x + 5},${oy + y - 5} ${ox + x + l - 5},${oy + y - 5} ${ox + x + l},${oy + y} ${ox + x + l - 5},${oy + y + 5} ${ox + x + 5},${oy + y + 5}`;
+      const V = (x, y, l) => `${ox + x},${oy + y} ${ox + x + 5},${oy + y + 5} ${ox + x + 5},${oy + y + l - 5} ${ox + x},${oy + y + l} ${ox + x - 5},${oy + y + l - 5} ${ox + x - 5},${oy + y + 5}`;
+      const shapes = { a: H(12, 10, 56), b: V(74, 14, 52), c: V(74, 74, 52), d: H(12, 134, 56), e: V(6, 74, 52), f: V(6, 14, 52), g: H(12, 72, 56) };
+      let o = `<rect x="${X0 + 50}" y="34" width="120" height="162" rx="6" fill="#15181d" stroke="var(--bd)"/>`;
+      for (const k in shapes) o += `<polygon points="${shapes[k]}" fill="${on(k) ? '#ef4444' : '#2b3038'}"/>`;
+      o += `<circle cx="${ox + 92}" cy="${oy + 134}" r="5" fill="${on('dp') ? '#ef4444' : '#2b3038'}"/>`;
+      o += `<g style="cursor:pointer"><rect data-ss="1" x="${X0 + 10}" y="270" width="200" height="22" rx="4" fill="var(--bd)"/><text data-ss="1" x="${X0 + 110}" y="285" text-anchor="middle" font-size="10" fill="var(--tx)">${cc ? 'Common CATHODE' : 'Common ANODE'} · click to switch</text></g>`;
+      return o
     }
     const lv = v => v === 1 ? 'HIGH (1)' : v === 0 ? 'LOW (0)' : v === 'C' ? 'CONTENTION' : 'Floating (X)';
     function renderPanels() {
@@ -533,19 +565,19 @@
       }
       else h += '<span class="i">Click an IC on the board to see its datasheet-style pinout and truth table.</span>';
       h += `<h2>Connection status</h2>Supply: <b class="${S.psu && !sim.short ? 'ok' : 'e'}">${sim.short ? 'SHORT' : S.psu ? 'ON, +5V' : 'OFF'}</b><br>ICs: ${S.ics.length} · Wires: ${S.wires.length}
- <h2>Guide: verify an AND gate</h2><details><summary>Show steps</summary><ol style="padding-left:16px;margin:4px 0"><li>Drag a 7408 onto the board (notch left, pin 1 bottom-left).</li><li>+5V terminal to the + rail (red); GND to the − rail (black). The IC needs both to run.</li><li>Rail + to pin 14 (VCC), rail − to pin 7 (GND).</li><li>Bottom panel: terminal above Input D1 to pin 1 (1A), D2 to pin 2 (1B). Pins 1–7 sit on the lower row, 8–14 on the upper row.</li><li>Pin 3 (1Y) to the terminal under Output D1 (top panel). Switch the supply ON.</li><li>Flip toggles up (1) or down (0); the LED above each toggle shows its level. Press Log row for each combination.</li></ol></details>`;
+ <h2>Guide: verify an AND gate</h2><details><summary>Show steps</summary><ol style="padding-left:16px;margin:4px 0"><li>Drag a 7408 onto the board (notch left, pin 1 bottom-left).</li><li>+5V terminal to the + rail (red); GND to the − rail (black). The IC needs both to run.</li><li>Rail + to pin 14 (VCC), rail − to pin 7 (GND).</li><li>Bottom panel: terminal above Input D1 to pin 1 (1A), D2 to pin 2 (1B). Pins 1–7 sit on the lower row, 8–14 on the upper row.</li><li>Pin 3 (1Y) to the terminal under Output D1 (top panel). Switch the supply ON.</li><li>Flip toggles up (1) or down (0); the LED above each toggle shows its level. Press Log row for each combination.</li></ol></details><h2>Guide: 7447 + 7-segment display</h2><details><summary>Show steps</summary><ol style="padding-left:16px;margin:4px 0"><li>Place a 7447. Power it: +5V to pin 16, GND to pin 8.</li><li>BCD inputs: switches D1 to D4 to pins 7 (A, LSB), 1 (B), 2 (C), 6 (D, MSB).</li><li>Outputs a, b, c, d, e, f, g (pins 13, 12, 11, 10, 9, 15, 14) to the matching a to g terminals of the display panel.</li><li>The 7447 is active-LOW, so use the common-anode display: connect display COM to +5V. LT̅, BI̅, RBI̅ may stay open (read as 1).</li><li>Switch the supply ON and set the switches: the display shows the digit. Click the bar under the display to change between common anode and common cathode.</li></ol></details>`;
       $('#info').innerHTML = h;
       $('#tt').innerHTML = sim.uin.length + sim.uout.length ? `<table><tr>${sim.uin.map(k => `<th>In D${k + 1}</th>`).join('')}${sim.uout.map(k => `<th>Out D${k + 1}</th>`).join('')}</tr>${log.map(r => `<tr>${sim.uin.map(k => `<td>${r.sw[k]}</td>`).join('')}${sim.uout.map(k => `<td>${r.led[k]}</td>`).join('')}</tr>`).join('')}</table>` : '<span class="i">Wire inputs/outputs to log them.</span>';
       $('#ms').innerHTML = (sim.msgs.length ? sim.msgs : [['ok', 'No faults detected.']]).map(m => `<li class="${m[0]}">${m[1]}</li>`).join('');
       const chs = [...sim.uin.map(k => ['In D' + (k + 1), 0, k]), ...sim.uout.map(k => ['Out D' + (k + 1), 1, k])]; let a = '', n = samples.length, dx = n > 1 ? 460 / (n - 1) : 0; chs.forEach(([nm, o, k], ch) => { const y0 = ch * 16 + 14; a += `<text x="0" y="${y0}" font-size="8" fill="var(--mu)">${nm}</text><polyline fill="none" stroke="${o ? '#ef4444' : '#2563eb'}" stroke-width="1.5" points="${samples.map((sm, i) => { const v = o ? sm.led[k] : sm.sw[k]; return `${34 + i * dx * .93},${v === 1 ? y0 - 9 : v === 0 ? y0 : y0 - 4.5}` }).join(' ')}"/>` }); $('#an').setAttribute('viewBox', `0 0 480 ${Math.max(60, chs.length * 16 + 10)}`); $('#an').innerHTML = a
     }
     // ===== Interaction =====
-    function probe(t) { const v = sim.vals[sim.N(t)]; $('#pr').textContent = `${t.replace(/^SW(\d+)$/, (a, n) => 'Input D' + (+n + 1)).replace(/^L(\d+)$/, (a, n) => 'Output D' + (+n + 1))} → ${lv(v)}` }
+    function probe(t) { const v = sim.vals[sim.N(t)]; $('#pr').textContent = `${t.replace(/^SW(\d+)$/, (a, n) => 'Input D' + (+n + 1)).replace(/^L(\d+)$/, (a, n) => 'Output D' + (+n + 1)).replace(/^SG(\w+)$/, (a, n) => n === 'CM' ? 'Display COM' : 'Display ' + n)} → ${lv(v)}` }
     function showLib() { document.querySelectorAll('.lib').forEach(d => d.classList.toggle('on', d.dataset.ty == S.armed)) }
     svg.addEventListener('pointerdown', e => {
       const d = e.target.dataset; mouse = pt(e); if (S.armed && mouse[1] > 215 && mouse[1] < 470) { const col = Math.round((mouse[0] - 50) / 30 - 3); if (canPlace(col)) { save(); const id = S.nid++; S.ics.push({ id, type: S.armed, col }); S.sel = { t: 'ic', id } } S.armed = null; showLib(); draw(); return } if (d.p !== undefined) { S.p[d.p] = 1; draw(); return }
       if (d.t) { probe(d.t); if (S.pending && S.pending !== d.t) { addWire(S.pending, d.t); S.pending = null } else { S.pending = d.t; dragW = true } }
-      else if (d.sw !== undefined) S.sw[d.sw] ^= 1; else if (d.psu !== undefined) S.psu = !S.psu;
+      else if (d.sw !== undefined) S.sw[d.sw] ^= 1; else if (d.psu !== undefined) S.psu = !S.psu; else if (d.ss !== undefined) S.cc = !S.cc;
       else if (d.ic) { S.sel = { t: 'ic', id: +d.ic }; if (e.pointerType === 'mouse') { drag = { k: 'move', id: +d.ic }; ghost(e, S.ics.find(i => i.id == d.ic).type) } }
       else if (d.w) S.sel = { t: 'w', id: +d.w }; else { S.sel = null; S.pending = null } draw()
     });
@@ -575,6 +607,14 @@
     addEventListener('keydown', e => { if (e.key == 'Delete' || e.key == 'Backspace') del(); if (e.key == 'Escape') { S.pending = null; draw() } if ((e.ctrlKey || e.metaKey) && e.key == 'z') { e.preventDefault(); $('#un').click() } if ((e.ctrlKey || e.metaKey) && e.key == 'y') { e.preventDefault(); $('#re').click() } });
     function nudge(d) { const s = S.sel; if (!s || s.t !== 'ic') return flash('Select an IC first'); const ic = S.ics.find(i => i.id == s.id); if (canPlace(ic.col + d, ic.id)) { save(); ic.col += d; draw() } }
     $('#ml').onclick = () => nudge(-1); $('#mr').onclick = () => nudge(1);
+    // board length: 5 columns per step (20 to 80); cannot cut off columns that still hold a part or a wire
+    function needCols() { let n = 0; S.ics.forEach(ic => { n = Math.max(n, ic.col + (DEF[ic.type]?.pins || 14) / 2) }); S.wires.forEach(w => [w.a, w.b].forEach(t => { const m = t.match(/^[TB](\d+)[a-j]$/) || t.match(/^R[tb][+-]:(\d+)$/); if (m) n = Math.max(n, +m[1] + 1) })); return n }
+    function setCols(n) {
+      n = Math.max(20, Math.min(80, n)); if (n === NC) return flash(n === 20 ? 'Smallest board (20 columns)' : 'Largest board (80 columns)');
+      if (n < needCols()) return flash('Move the parts and wires out of the columns you are cutting off first');
+      save(); NC = n; buildStatic(); draw(); flash('Board: ' + NC + ' columns')
+    }
+    $('#cm').onclick = () => setCols(NC - 5); $('#cp').onclick = () => setCols(NC + 5);
     let zw = 0; function zoom(w) { zw = w; svg.style.width = w ? w + 'px' : '100%' }
     $('#zi').onclick = () => zoom(Math.min(2400, (zw || svg.clientWidth) * 1.25)); $('#zo').onclick = () => zoom(Math.max(500, (zw || svg.clientWidth) / 1.25)); $('#zf').onclick = () => zoom(0);
     if (innerWidth < 700) zoom(1000);
