@@ -260,8 +260,6 @@
         padding: 8px 12px
       }
     }
-    #ex { display: flex; flex-direction: column; gap: 4px }
-    #ex button { text-align: left; font-size: 12px; padding: 6px 8px }
   </style>
 <div id="app">
     <header class="p">
@@ -273,8 +271,6 @@
     <aside class="p l">
       <h2>IC library (drag onto board)</h2>
       <div id="lib"></div>
-      <h2>Example circuits</h2>
-      <div id="ex"></div>
       <h2>How to wire</h2>
       <div class="dis">Drag from one terminal to another, or click two terminals. Click a wire or IC to select, then
         Delete. Hover a hole to probe its level.</div>
@@ -597,110 +593,12 @@
       }
       else h += '<span class="i">Click an IC on the board to see its datasheet-style pinout and truth table.</span>';
       h += `<h2>Connection status</h2>Supply: <b class="${S.psu && !sim.short ? 'ok' : 'e'}">${sim.short ? 'SHORT' : S.psu ? 'ON, +5V' : 'OFF'}</b><br>ICs: ${S.ics.length} · Wires: ${S.wires.length}
- ${EX ? `<h2>${EXAMPLES[EX].title}</h2>${EXAMPLES[EX].notes}` : ''}<h2>Guide: verify an AND gate</h2><details><summary>Show steps</summary><ol style="padding-left:16px;margin:4px 0"><li>Drag a 7408 onto the board (notch left, pin 1 bottom-left).</li><li>+5V terminal to the + rail (red); GND to the − rail (black). The IC needs both to run.</li><li>Rail + to pin 14 (VCC), rail − to pin 7 (GND).</li><li>Bottom panel: terminal above Input D1 to pin 1 (1A), D2 to pin 2 (1B). Pins 1–7 sit on the lower row, 8–14 on the upper row.</li><li>Pin 3 (1Y) to the terminal under Output D1 (top panel). Switch the supply ON.</li><li>Flip toggles up (1) or down (0); the LED above each toggle shows its level. Press Log row for each combination.</li></ol></details><h2>Guide: 7447 + 7-segment display</h2><details><summary>Show steps</summary><ol style="padding-left:16px;margin:4px 0"><li>Place a 7447. Power it: +5V to pin 16, GND to pin 8.</li><li>BCD inputs: switches D1 to D4 to pins 7 (A, LSB), 1 (B), 2 (C), 6 (D, MSB).</li><li>Outputs a, b, c, d, e, f, g (7447 pins 13, 12, 11, 10, 9, 15, 14) to display pins 7, 6, 4, 2, 1, 9, 10. (Display pin 5 = dp.)</li><li>Display pins 3 and 8 are COM, joined inside the part. For this common-anode display put a <b>560 Ω resistor</b> between +5V and COM: place the resistor from the library across the centre gap, wire +5V to one lead strip and the other lead strip to display pin 3.</li><li>Without the resistor the lab warns that a lit segment has no series resistor.</li><li>Switch the supply ON and set the switches: the display shows the digit. Click the bar under the display to change between common anode and common cathode (then COM goes to GND through the resistor).</li></ol></details>`;
+ <h2>Guide: verify an AND gate</h2><details><summary>Show steps</summary><ol style="padding-left:16px;margin:4px 0"><li>Drag a 7408 onto the board (notch left, pin 1 bottom-left).</li><li>+5V terminal to the + rail (red); GND to the − rail (black). The IC needs both to run.</li><li>Rail + to pin 14 (VCC), rail − to pin 7 (GND).</li><li>Bottom panel: terminal above Input D1 to pin 1 (1A), D2 to pin 2 (1B). Pins 1–7 sit on the lower row, 8–14 on the upper row.</li><li>Pin 3 (1Y) to the terminal under Output D1 (top panel). Switch the supply ON.</li><li>Flip toggles up (1) or down (0); the LED above each toggle shows its level. Press Log row for each combination.</li></ol></details><h2>Guide: 7447 + 7-segment display</h2><details><summary>Show steps</summary><ol style="padding-left:16px;margin:4px 0"><li>Place a 7447. Power it: +5V to pin 16, GND to pin 8.</li><li>BCD inputs: switches D1 to D4 to pins 7 (A, LSB), 1 (B), 2 (C), 6 (D, MSB).</li><li>Outputs a, b, c, d, e, f, g (7447 pins 13, 12, 11, 10, 9, 15, 14) to display pins 7, 6, 4, 2, 1, 9, 10. (Display pin 5 = dp.)</li><li>Display pins 3 and 8 are COM, joined inside the part. For this common-anode display put a <b>560 Ω resistor</b> between +5V and COM: place the resistor from the library across the centre gap, wire +5V to one lead strip and the other lead strip to display pin 3.</li><li>Without the resistor the lab warns that a lit segment has no series resistor.</li><li>Switch the supply ON and set the switches: the display shows the digit. Click the bar under the display to change between common anode and common cathode (then COM goes to GND through the resistor).</li></ol></details>`;
       $('#info').innerHTML = h;
       $('#tt').innerHTML = sim.uin.length + sim.uout.length ? `<table><tr>${sim.uin.map(k => `<th>In D${k + 1}</th>`).join('')}${sim.uout.map(k => `<th>Out D${k + 1}</th>`).join('')}</tr>${log.map(r => `<tr>${sim.uin.map(k => `<td>${r.sw[k]}</td>`).join('')}${sim.uout.map(k => `<td>${r.led[k]}</td>`).join('')}</tr>`).join('')}</table>` : '<span class="i">Wire inputs/outputs to log them.</span>';
       $('#ms').innerHTML = (sim.msgs.length ? sim.msgs : [['ok', 'No faults detected.']]).map(m => `<li class="${m[0]}">${m[1]}</li>`).join('');
       const chs = [...sim.uin.map(k => ['In D' + (k + 1), 0, k]), ...sim.uout.map(k => ['Out D' + (k + 1), 1, k])]; let a = '', n = samples.length, dx = n > 1 ? 460 / (n - 1) : 0; chs.forEach(([nm, o, k], ch) => { const y0 = ch * 16 + 14; a += `<text x="0" y="${y0}" font-size="8" fill="var(--mu)">${nm}</text><polyline fill="none" stroke="${o ? '#ef4444' : '#2563eb'}" stroke-width="1.5" points="${samples.map((sm, i) => { const v = o ? sm.led[k] : sm.sw[k]; return `${34 + i * dx * .93},${v === 1 ? y0 - 9 : v === 0 ? y0 : y0 - 4.5}` }).join(' ')}"/>` }); $('#an').setAttribute('viewBox', `0 0 480 ${Math.max(60, chs.length * 16 + 10)}`); $('#an').innerHTML = a
     }
-
-    // ===== Example circuits (loaded wired and powered; wire colours show the role of each wire) =====
-    const IN = '#2563eb', CK = '#d97706', FB = '#9333ea', SG = '#0891b2', OUT = '#16a34a';
-    // master-slave JK from NAND gates. chip 0 = 7410, chip 1 = 7400 (master + clock inverter), chip 2 = 7400 (slave)
-    function jkCore(w, P) {
-      w('P1', P(0, 13), CK); w('P1', P(0, 5), CK); w('P1', P(1, 9), CK); w('P1', P(1, 10), CK);   // CLK to G1, G2 and the inverter
-      w(P(2, 11), P(0, 2), FB); w(P(2, 8), P(0, 4), FB);                                          // Q̄, Q back to G1, G2
-      w(P(0, 12), P(1, 1), SG); w(P(0, 6), P(1, 4), SG);                                          // G1, G2 to the master latch
-      w(P(1, 6), P(1, 2), FB); w(P(1, 3), P(1, 5), FB);                                           // master cross-coupling
-      w(P(1, 8), P(2, 2), CK); w(P(1, 8), P(2, 5), CK);                                           // CLK̄ to the slave gates
-      w(P(1, 3), P(2, 1), SG); w(P(1, 6), P(2, 4), SG);                                           // M, M̄ to the slave gates
-      w(P(2, 3), P(2, 9), SG); w(P(2, 6), P(2, 13), SG);                                          // G5, G6 to the slave latch
-      w(P(2, 11), P(2, 10), FB); w(P(2, 8), P(2, 12), FB);                                        // slave cross-coupling
-      w(P(2, 8), 'L0', OUT); w(P(2, 11), 'L1', OUT)                                               // Q, Q̄
-    }
-    const EXAMPLES = {
-      jk: {
-        title: 'JK flip-flop (NAND gates)',
-        ics: [['7410', 2], ['7400', 10], ['7400', 18]],
-        init: [[1, 3, 0], [1, 6, 1], [2, 8, 0], [2, 11, 1]],
-        notes: '<b>Master-slave JK flip-flop</b> from 3-input NAND (7410) and 2-input NAND (7400) gates only. The master is open while CLK = 1, the slave while CLK = 0, so Q changes when the clock falls (on the <b>release</b> of P1). This avoids the race-around of a single-stage JK.<br><b>Switches:</b> D1 = J, D2 = K. <b>LEDs:</b> D1 = Q, D2 = Q̄.<br><b>Use:</b> set J and K, then press and release P1. On power-on the circuit starts at Q = 0.<br><b>Wires:</b> 30.<br><b>Wire colours:</b> blue = inputs, amber = clock, purple = feedback / cross-coupling, teal = gate to gate, green = outputs, red / black = power.<b>Gates:</b> 7410 = G1 (J·Q̄·CLK) and G2 (K·Q·CLK). 7400 #1 = master latch G3, G4 and clock inverter G9 (both inputs tied). 7400 #2 = slave gates G5, G6 and slave latch G7, G8.<table><tr><th>J</th><th>K</th><th>Q next</th></tr><tr><td>0</td><td>0</td><td>Q (hold)</td></tr><tr><td>0</td><td>1</td><td>0</td></tr><tr><td>1</td><td>0</td><td>1</td></tr><tr><td>1</td><td>1</td><td>Q̄ (toggle)</td></tr></table>',
-        wire: (w, P) => { w('SW0', P(0, 1), IN); w('SW1', P(0, 3), IN); jkCore(w, P) }
-      },
-      t: {
-        title: 'T flip-flop (NAND gates)',
-        ics: [['7410', 2], ['7400', 10], ['7400', 18]],
-        init: [[1, 3, 0], [1, 6, 1], [2, 8, 0], [2, 11, 1]],
-        notes: '<b>T flip-flop</b>: the same NAND master-slave circuit with J and K joined to one input T.<br><b>Switches:</b> D1 = T. <b>LEDs:</b> D1 = Q, D2 = Q̄.<br><b>Use:</b> with T = 1 every press and release of P1 toggles Q (Q changes on the release). With T = 0 it holds. On power-on the circuit starts at Q = 0.<br><b>Wires:</b> 30.<br><b>Wire colours:</b> blue = inputs, amber = clock, purple = feedback / cross-coupling, teal = gate to gate, green = outputs, red / black = power.<b>Gates:</b> 7410 = G1 (J·Q̄·CLK) and G2 (K·Q·CLK). 7400 #1 = master latch G3, G4 and clock inverter G9 (both inputs tied). 7400 #2 = slave gates G5, G6 and slave latch G7, G8.<table><tr><th>T</th><th>Q next</th></tr><tr><td>0</td><td>Q (hold)</td></tr><tr><td>1</td><td>Q̄ (toggle)</td></tr></table>',
-        wire: (w, P) => { w('SW0', P(0, 1), IN); w('SW0', P(0, 3), IN); jkCore(w, P) }
-      },
-      d: {
-        title: 'D flip-flop (NAND + NOT)',
-        ics: [['7404', 2], ['7400', 10], ['7400', 18]],
-        init: [[1, 8, 0], [1, 11, 1], [2, 8, 0], [2, 11, 1]],
-        notes: '<b>Master-slave D flip-flop</b> from 2-input NAND gates (7400) and NOT gates (7404). A NOT gate makes D̄ for the second input gate, the other NOT gate makes CLK̄. No feedback to the input gates is needed, so the 3-input NAND is not required. Q copies D when the clock falls (on the <b>release</b> of P1).<br><b>Switches:</b> D1 = D. <b>LEDs:</b> D1 = Q, D2 = Q̄.<br><b>Use:</b> set D, then press and release P1. On power-on the circuit starts at Q = 0.<br><b>Wires:</b> 28.<br><b>Wire colours:</b> blue = inputs, amber = clock, purple = feedback / cross-coupling, teal = gate to gate, green = outputs, red / black = power.<b>Gates:</b> 7404 = D̄ and CLK̄. 7400 #1 = input gates G1 (D·CLK), G2 (D̄·CLK) and master latch G3, G4. 7400 #2 = slave gates G5, G6 and slave latch G7, G8.<table><tr><th>D</th><th>Q next</th></tr><tr><td>0</td><td>0</td></tr><tr><td>1</td><td>1</td></tr></table>',
-        wire: (w, P) => {
-          w('SW0', P(1, 1), IN); w('SW0', P(0, 1), IN); w(P(0, 2), P(1, 4), SG);                    // D to G1 and the NOT gate, D̄ to G2
-          w('P1', P(1, 2), CK); w('P1', P(1, 5), CK); w('P1', P(0, 3), CK);                         // CLK to G1, G2 and the NOT gate
-          w(P(0, 4), P(2, 2), CK); w(P(0, 4), P(2, 5), CK);                                         // CLK̄ to the slave gates
-          w(P(1, 3), P(1, 9), SG); w(P(1, 6), P(1, 13), SG);                                        // G1, G2 to the master latch
-          w(P(1, 11), P(1, 10), FB); w(P(1, 8), P(1, 12), FB);                                      // master cross-coupling
-          w(P(1, 8), P(2, 1), SG); w(P(1, 11), P(2, 4), SG);                                        // M, M̄ to the slave gates
-          w(P(2, 3), P(2, 9), SG); w(P(2, 6), P(2, 13), SG);                                        // G5, G6 to the slave latch
-          w(P(2, 11), P(2, 10), FB); w(P(2, 8), P(2, 12), FB);                                      // slave cross-coupling
-          w(P(2, 8), 'L0', OUT); w(P(2, 11), 'L1', OUT)                                             // Q, Q̄
-        }
-      },
-      seg: {
-        title: 'BCD to 7-segment display (7447)',
-        ics: [['7447', 17], ['R560', 27]],
-        notes: '<b>BCD to 7-segment</b>: the 7447 decodes a 4-bit BCD number and drives a common-anode display (outputs are active-LOW). One <b>560 Ω resistor</b> between +5V and the display COM limits the segment current.<br><b>Switches:</b> D1 = A (LSB), D2 = B, D3 = C, D4 = D (MSB). Set a number from 0 to 9 and the display shows it.<br><b>Display pins:</b> 7 = a, 6 = b, 4 = c, 2 = d, 1 = e, 9 = f, 10 = g, 5 = dp. Pins 3 and 8 are COM (joined inside the display).<br><b>Wires:</b> 17. LT̅, BI̅ and RBI̅ are left open (read as 1).<br><b>Wire colours:</b> blue = BCD inputs, green = segment outputs, red = +5V (power, and through the resistor to COM).<table><tr><th>D</th><th>C</th><th>B</th><th>A</th><th>Shows</th></tr><tr><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td></tr><tr><td>0</td><td>0</td><td>0</td><td>1</td><td>1</td></tr><tr><td>0</td><td>0</td><td>1</td><td>0</td><td>2</td></tr><tr><td>0</td><td>0</td><td>1</td><td>1</td><td>3</td></tr><tr><td>0</td><td>1</td><td>0</td><td>0</td><td>4</td></tr><tr><td>0</td><td>1</td><td>0</td><td>1</td><td>5</td></tr><tr><td>0</td><td>1</td><td>1</td><td>0</td><td>6</td></tr><tr><td>0</td><td>1</td><td>1</td><td>1</td><td>7</td></tr><tr><td>1</td><td>0</td><td>0</td><td>0</td><td>8</td></tr><tr><td>1</td><td>0</td><td>0</td><td>1</td><td>9</td></tr></table>Inputs 10 to 15 give the 7447\'s special shapes.',
-        wire: (w, P) => {
-          w('SW0', P(0, 7), IN); w('SW1', P(0, 1), IN); w('SW2', P(0, 2), IN); w('SW3', P(0, 6), IN);       // A, B, C, D
-          [[13, 7], [12, 6], [11, 4], [10, 2], [9, 1], [15, 9], [14, 10]].forEach(([p, k]) => w(P(0, p), 'SG' + k, OUT)); // a to g on display pins 7, 6, 4, 2, 1, 9, 10
-          w('PSU+', P(1, 2)); w(P(1, 1), 'SG3', '#dc2626')                                          // +5V through the 560 ohm resistor to COM (pin 3)
-        }
-      },
-      fa: {
-        title: 'Full adder (XOR, AND, OR)',
-        ics: [['7486', 4], ['7408', 13], ['7432', 22]],
-        notes: '<b>Full adder</b> adds three bits A, B and the carry-in Cin.<br><b>Sum = (A ⊕ B) ⊕ Cin</b><br><b>Cout = A·B + Cin·(A ⊕ B)</b><br>Two XOR gates (7486), two AND gates (7408) and one OR gate (7432). The first XOR output A ⊕ B is shared by the second XOR and by the second AND.<br><b>Switches:</b> D1 = A, D2 = B, D3 = Cin. <b>LEDs:</b> D1 = Sum, D2 = Cout.<br><b>Wires:</b> 20.<br><b>Wire colours:</b> blue = inputs, teal = between gates, green = outputs, red / black = power.<table><tr><th>A</th><th>B</th><th>Cin</th><th>Sum</th><th>Cout</th></tr><tr><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td></tr><tr><td>0</td><td>0</td><td>1</td><td>1</td><td>0</td></tr><tr><td>0</td><td>1</td><td>0</td><td>1</td><td>0</td></tr><tr><td>0</td><td>1</td><td>1</td><td>0</td><td>1</td></tr><tr><td>1</td><td>0</td><td>0</td><td>1</td><td>0</td></tr><tr><td>1</td><td>0</td><td>1</td><td>0</td><td>1</td></tr><tr><td>1</td><td>1</td><td>0</td><td>0</td><td>1</td></tr><tr><td>1</td><td>1</td><td>1</td><td>1</td><td>1</td></tr></table>',
-        wire: (w, P) => {
-          w('SW0', P(0, 1), IN); w('SW0', P(1, 1), IN);                                             // A to XOR1 and AND1
-          w('SW1', P(0, 2), IN); w('SW1', P(1, 2), IN);                                             // B to XOR1 and AND1
-          w('SW2', P(0, 5), IN); w('SW2', P(1, 4), IN);                                             // Cin to XOR2 and AND2
-          w(P(0, 3), P(0, 4), SG); w(P(0, 3), P(1, 5), SG);                                         // A xor B to XOR2 and AND2
-          w(P(1, 3), P(2, 1), SG); w(P(1, 6), P(2, 2), SG);                                         // both AND outputs to the OR gate
-          w(P(0, 6), 'L0', OUT); w(P(2, 3), 'L1', OUT)                                              // Sum, Cout
-        }
-      },
-      demux: {
-        title: '1:2 demultiplexer',
-        ics: [['7404', 6], ['7408', 15]],
-        notes: '<b>1:2 demultiplexer</b>: the data input D is routed to output Y0 when S = 0 and to Y1 when S = 1.<br><b>Y0 = D·S̄, Y1 = D·S</b> (one NOT gate and two AND gates).<br><b>Switches:</b> D1 = D (data), D2 = S (select). <b>LEDs:</b> D1 = Y0, D2 = Y1.<br><b>Wires:</b> 13.<br><b>Wire colours:</b> blue = inputs, amber = clock, purple = feedback / cross-coupling, teal = gate to gate, green = outputs, red / black = power.<table><tr><th>D</th><th>S</th><th>Y0</th><th>Y1</th></tr><tr><td>0</td><td>0</td><td>0</td><td>0</td></tr><tr><td>1</td><td>0</td><td>1</td><td>0</td></tr><tr><td>0</td><td>1</td><td>0</td><td>0</td></tr><tr><td>1</td><td>1</td><td>0</td><td>1</td></tr></table>',
-        wire: (w, P) => {
-          w('SW1', P(0, 1), IN); w('SW1', P(1, 5), IN); w(P(0, 2), P(1, 2), SG);                    // S to the NOT gate and AND2, S̄ to AND1
-          w('SW0', P(1, 1), IN); w('SW0', P(1, 4), IN);                                             // D to both AND gates
-          w(P(1, 3), 'L0', OUT); w(P(1, 6), 'L1', OUT)                                              // Y0, Y1
-        }
-      }
-    };
-    let EX = null;
-    function loadExample(name) {
-      const E = EXAMPLES[name]; save(); S._mem = S._init = null; S._fresh = false;
-      S.ics = []; S.wires = []; S.sel = S.pending = null; S.sw = Array(12).fill(0); S.p = [0, 0]; S.psu = true; EX = name;
-      E.ics.forEach(([type, col]) => S.ics.push({ id: S.nid++, type, col }));
-      const used = {}, rl = {}, geo = i => { const ic = S.ics[i], n = DEF[ic.type].pins; return { ic, n, W: n / 2 } };
-      const isBot = (i, p) => p <= geo(i).W, sCol = (i, p) => { const g = geo(i); return p <= g.W ? g.ic.col + p - 1 : g.ic.col + g.n - p };
-      const w = (a, b, c) => S.wires.push({ id: S.nid++, a, b, color: c || wcol(a, b) });
-      const P = (i, p) => { const b = isBot(i, p), k = (b ? 'B' : 'T') + sCol(i, p), n = used[k] = (used[k] || 0) + 1; return k + (b ? 'ghij' : 'dcba')[n - 1] };
-      const need = r => { if (!rl[r]) { rl[r] = 1; w(r[1] == '+' ? 'PSU+' : 'PSUG', 'R' + r + ':0') } };   // a power rail is wired only when a pin uses it
-      const rail = (i, p, s) => { const b = isBot(i, p), r = (b ? 'b' : 't') + s; need(r); w(P(i, p), 'R' + r + ':' + sCol(i, p)) };
-      S.ics.forEach((ic, i) => { if (DEF[ic.type].res) return; rail(i, DEF[ic.type].vcc, '+'); rail(i, DEF[ic.type].gnd, '-') });
-      E.wire(w, P);
-      if (E.init) { S._init = {}; E.init.forEach(([i, p, v]) => S._init[pinHole(S.ics[i], p)] = v); S._mem = { ...S._init }; S._fresh = true }
-      draw(); flash('Loaded: ' + E.title)
-    }
-    const exBox = $('#ex'); Object.entries(EXAMPLES).forEach(([k, E]) => { const b = document.createElement('button'); b.textContent = E.title; b.onclick = () => loadExample(k); exBox.appendChild(b) });
 
     // ===== Interaction =====
     function probe(t) { const v = sim.vals[sim.N(t)]; $('#pr').textContent = `${t.replace(/^SW(\d+)$/, (a, n) => 'Input D' + (+n + 1)).replace(/^L(\d+)$/, (a, n) => 'Output D' + (+n + 1)).replace(/^SG(\d+)$/, (a, n) => 'Display pin ' + n + (n === '3' || n === '8' ? ' (COM)' : ''))} → ${lv(v)}` }
@@ -732,7 +630,7 @@
     const lib = $('#lib'); Object.values(DEF).sort((a, b) => (a.res ? 1 : 0) - (b.res ? 1 : 0) || (a.res ? a.res - b.res : a.n - b.n)).forEach(D => { const d = document.createElement('div'); d.className = 'lib'; d.innerHTML = `<b>${D.label || D.n}</b><small>${D.desc}</small>`; d.dataset.ty = D.n; d.onpointerdown = e => { if (e.pointerType === 'mouse') { e.preventDefault(); drag = { k: 'new', type: D.n }; ghost(e, D.n) } }; d.onclick = () => { S.armed = S.armed === D.n ? null : D.n; showLib(); flash(S.armed ? 'Tap the breadboard to place ' + (D.label || D.n) : '') }; lib.appendChild(d) });
     function del() { if (!S.sel) return; save(); if (S.sel.t == 'ic') S.ics = S.ics.filter(i => i.id != S.sel.id); else S.wires = S.wires.filter(w => w.id != S.sel.id); S.sel = null; draw() }
     $('#dl').onclick = del; $('#un').onclick = () => { if (U.length) { R.push(snap()); restore(U.pop()); draw() } }; $('#re').onclick = () => { if (R.length) { U.push(snap()); restore(R.pop()); draw() } };
-    $('#rs').onclick = () => { save(); EX = null; S._mem = S._init = null; S.ics = []; S.wires = []; S.sel = S.pending = null; draw() };
+    $('#rs').onclick = () => { save(); S._mem = S._init = null; S.ics = []; S.wires = []; S.sel = S.pending = null; draw() };
     $('#lg').onclick = () => { log.push({ sw: [...S.sw], led: [...sim.leds] }); draw() }; $('#lc').onclick = () => { log = []; draw() };
     $('#th').onclick = () => { const r = document.documentElement, d = r.dataset.theme ? r.dataset.theme == 'dark' : matchMedia('(prefers-color-scheme:dark)').matches; r.dataset.theme = d ? 'light' : 'dark' };
     addEventListener('keydown', e => { if (e.key == 'Delete' || e.key == 'Backspace') del(); if (e.key == 'Escape') { S.pending = null; draw() } if ((e.ctrlKey || e.metaKey) && e.key == 'z') { e.preventDefault(); $('#un').click() } if ((e.ctrlKey || e.metaKey) && e.key == 'y') { e.preventDefault(); $('#re').click() } });
